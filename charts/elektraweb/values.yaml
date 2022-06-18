@@ -1,0 +1,165 @@
+# Programlarımıza erişim için gerekli GitHub erişim anahtarı
+regcred:
+  enabled: true
+  user: talyabilisim
+  key: REQUIRED-github-access-token
+# PVC
+#persistentVolumeClaims:
+#  mssql-data:
+#    accessModes:
+#      - ReadWriteOnce
+#    storageClassName: longhorn
+#    resources:
+#      requests:
+#        storage: 100Gi
+# NodeJS Web Servis
+worker:
+  host: nodejs4001
+  # sslClusterIssuer: letsencrypt-staging
+  image: ghcr.io/travelaps/nodejs-worker:v476
+  replicas: 1
+  config:
+    dbConfig:
+      user: sa
+      password: aA!01012000
+      server: sql
+      trustServerCertificate: true
+    readOnly: false
+    restartHours: 0
+    applicationUpdatePin: uU!01012000
+    #syncRepeatDelaySeconds: 30
+    #syncTokens:
+    #  24434: * * * HOTEL API KEY * * *
+    #syncTables:
+    #  - Object: DELETEDRECORDS
+    #    TimeColumn: DELETEUTC
+    #    TimeValue: YESTERDAY
+    #  - Object: COUNTRY
+    #    TimeColumn: LASTUPDATE_DATE
+    #    TimeValue: YESTERDAY
+    #  - Object: STDCURCODE
+    #    TimeColumn: LASTUPDATE_DATE
+    #    TimeValue: YESTERDAY
+    #  - Object: STDEXCHANGERATES
+    #    TimeColumn: LASTUPDATE_DATE
+    #    TimeValue: YESTERDAY
+    #  - Object: CALENDAR
+    #    TimeColumn: LASTUPDATE_DATE
+    #    TimeValue: YESTERDAY
+    #  - Object: STDROLE_DETAIL
+    #    TimeColumn: LASTUPDATE
+    #    TimeValue: '1900-01-01'
+# SQL Server
+sql:
+  install: true
+  pid: Standard
+  saPassword: aA!01012000
+  connection:
+    server: sql
+    port: 1433
+    user: sa
+    password: aA!01012000
+  memoryLimit: 16000
+  tcpPort: 1433
+  agentEnabled: true
+  runCreationScripts: true
+  serviceType: ClusterIP
+  elektraAdminUser:
+    username: elektraweb
+    password: eE!01012000
+  volumes:
+    - name: mssql-data
+      hostPath:
+        path: /elektraweb/sql-data
+        type: DirectoryOrCreate
+  volumeMounts:
+    - name: mssql-data
+      mountPath: /var/opt/mssql/data
+  #  volumes:
+  #    - name: mssql-data
+  #      persistentVolumeClaim:
+  #        claimName: mssql-data
+  #    - name: mssql-backup
+  #      nfs:
+  #        server: nfs-server-ip
+  #        path: /path/to/remote/shared/folder
+  #  volumeMounts:
+  #    - name: mssql-data
+  #      mountPath: /var/opt/mssql/data
+  #    - name: mssql-backup
+  #      mountPath: /mssqlbackup
+# Angus
+angus:
+  install: true
+  image: ghcr.io/travelaps/angus:v361
+  host: elektraweb
+  # sslClusterIssuer: letsencrypt-staging
+  displayName: ElektraWeb
+  shortName: ewebcloud
+  logo: elektraweb.png
+  # azureSettings:
+  #   container: files
+  #   storageUrl: nodejs4001
+  #   token: ?token=TOKEN&se=2023-02-26T15:10:47Z
+# Pos
+pos:
+  install: true
+  image: ghcr.io/travelaps/pos-ng11:v151
+  host: elektrawebpos
+  # sslClusterIssuer: letsencrypt-staging
+# .NET Core FRX Rapor Programı
+reporting:
+  install: true
+  host: elektrawebreport
+  # sslClusterIssuer: letsencrypt-staging
+  sqlServer: sql
+  sqlUser: sa
+  sqlPassword: aA!01012000
+# Kanal Yönetimi
+channelManager:
+  install: false
+# Kubernetes Dashboard
+dashboard:
+  install: false
+  namespace: kube-system
+  createNamespace: false
+# Kubernetes Dashboard'a dışarıdan erişim için ingress/user
+dashboardAccess:
+  ingress:
+    enabled: false
+    host: kubernetes.docker.internal
+  adminUser:
+    enabled: false
+    name: admin-user
+# Nginx Ingress
+ingressNginx:
+  install: false
+  class: public
+  namespace: ingress
+  createNamespace: true
+# Create Hotel?
+hotel:
+  install: false
+  #Mutlaka once cloudda register olup kendi HOTELID'nizi yazmalısınız
+  hotelid: 24434
+  hotelname: localtesthotel
+#STATIC DATA
+staticData:
+  install: true
+# File Uploader
+fileUploader:
+  install: false
+  image: ghcr.io/travelaps/file-uploader:v3
+  env:
+    TRUSTED_ORIGINS: '["https://elektraweb"]'
+    TRUSTED_IPS: '["*"]'
+    ALLOWED_FILETYPES: '["*"]'
+    ALLOWED_TOKENS: '["TOKEN"]'
+  volumes:
+    - name: files
+      persistentVolumeClaim:
+        claimName: file-uploader
+  volumeMounts:
+    - name: files
+      mountPath: /app/uploads/files/
+

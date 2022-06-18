@@ -1,0 +1,80 @@
+{{ if .Values.pos.install }}
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: pos-ng11
+  labels:
+    k8s-app: pos-ng11
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: pos-ng11
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/005.0-pos-endpoint.yaml") . | sha256sum }}
+      name: pos-ng11
+      labels:
+        k8s-app: pos-ng11
+    spec:
+      volumes:
+        - name: endpoints
+          configMap:
+            name: pos-endpoints
+            defaultMode: 420
+      containers:
+        - name: pos-ng11
+          image: {{ .Values.pos.image }}
+          volumeMounts:
+            - name: endpoints
+              mountPath: /usr/share/nginx/html/assets/endpoints-pos-client.json
+              subPath: endpoints-pos-client.json
+      imagePullSecrets:
+        - name: regcred
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: pos-ng11
+  labels:
+    k8s-app: pos-ng11
+spec:
+  ports:
+    - name: pos-port
+      protocol: TCP
+      port: 80
+      targetPort: 80
+  selector:
+    k8s-app: pos-ng11
+  type: ClusterIP
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: pos-ng11-ingress
+  annotations:
+    {{- if .Values.pos.sslIssuer }}
+    cert-manager.io/issuer: {{ .Values.pos.sslIssuer }}
+    {{- end }}
+    {{- if .Values.pos.sslClusterIssuer }}
+    cert-manager.io/cluster-issuer: {{ .Values.pos.sslClusterIssuer }}
+    {{- end }}
+    kubernetes.io/ingress.class: {{ .Values.ingressNginx.class }}
+spec:
+  tls:
+    - hosts:
+        - {{ .Values.pos.host }}
+      secretName: elektrawebpos-cert
+  rules:
+    - host: {{ .Values.pos.host }}
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: pos-ng11
+                port:
+                  number: 80
+  {{ end }}
